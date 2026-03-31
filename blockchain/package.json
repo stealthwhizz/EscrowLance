@@ -1,0 +1,20 @@
+{
+  "name": "chainescrow-blockchain",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.1"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.5",
+    "chainescrow": "file:.."
+  }
+}
