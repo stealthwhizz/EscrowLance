@@ -1,5 +1,11 @@
 # EscrowLancer
 
+![React](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react&logoColor=white)
+![Express](https://img.shields.io/badge/Backend-Express-000000?logo=express&logoColor=white)
+![Hardhat](https://img.shields.io/badge/Smart_Contracts-Hardhat-f7d046?logo=hardhat&logoColor=black)
+![Sepolia](https://img.shields.io/badge/Network-Sepolia-8145dc?logo=ethereum&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f)
+
 EscrowLancer is a hybrid on-chain/off-chain, milestone-based escrow for freelance projects. Clients fund a Sepolia smart contract, freelancers submit proofs (IPFS), and payouts release after client approval. The app ships with React + Tailwind, Express + MongoDB, and a Hardhat Solidity contract (OpenZeppelin security).
 
 ## Tech Stack
