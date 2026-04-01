@@ -4,7 +4,18 @@ import { useAuth } from "../../context/AuthContext.jsx";
 
 const Wallet = () => {
   const { user } = useAuth();
-  const { address, connect, disconnect, network, isConnected, provider, switchToChain, isSwitching, error: walletError } = useWallet();
+  const {
+    address,
+    connect,
+    disconnect,
+    network,
+    isConnected,
+    provider,
+    switchToChain,
+    isSwitching,
+    error: walletError,
+  } = useWallet();
+
   const [status, setStatus] = useState("");
   const walletMatchesUser = Boolean(
     address && user?.walletAddress && address.toLowerCase() === user.walletAddress.toLowerCase()
@@ -12,7 +23,11 @@ const Wallet = () => {
   const showConnected = isConnected && walletMatchesUser;
   const sepoliaChainIdHex = "0xaa36a7"; // 11155111
   const sepoliaChainId = 11155111;
-  const onWrongNetwork = network && Number(network.chainId) !== sepoliaChainId; // ethers v6 returns BigInt
+  const onWrongNetwork = network && Number(network.chainId) !== sepoliaChainId;
+
+  const short = (val) => (val ? `${val.slice(0, 6)}...${val.slice(-4)}` : "-");
+  const networkName = network?.name || "-";
+  const networkId = network?.chainId ? Number(network.chainId) : "-";
 
   const handleSwitch = async () => {
     setStatus("");
@@ -21,7 +36,6 @@ const Wallet = () => {
         setStatus("MetaMask not available in this browser.");
         return;
       }
-      // Prompt MetaMask to let the user pick an account
       await provider.send("wallet_requestPermissions", [{ eth_accounts: {} }]);
       await connect();
     } catch (err) {
@@ -30,53 +44,157 @@ const Wallet = () => {
     }
   };
 
+  const primaryAction = () => {
+    if (onWrongNetwork) return switchToChain(sepoliaChainIdHex);
+    if (!isConnected) return handleSwitch();
+    if (!walletMatchesUser) return handleSwitch();
+    return undefined;
+  };
+
+  const primaryLabel = () => {
+    if (showConnected) return "Connected";
+    if (onWrongNetwork) return isSwitching ? "Switching..." : "Switch to Sepolia";
+    if (!isConnected) return "Connect MetaMask";
+    if (!walletMatchesUser) return "Switch to profile wallet";
+    return "Connect";
+  };
+
+  const statusPill = (ok, labelOk, labelBad) => (
+    <span
+      className={`px-2.5 py-1 text-xs rounded-full border ${
+        ok
+          ? "border-emerald-400 text-emerald-200 bg-emerald-400/10"
+          : "border-amber-400 text-amber-200 bg-amber-400/10"
+      }`}
+    >
+      {ok ? labelOk : labelBad}
+    </span>
+  );
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-xl font-semibold">Wallet</h3>
-      <div className="bg-slate-900 border border-slate-800 p-4 rounded">
-        <p className="text-slate-300">Connected address:</p>
-        <p className="text-lg font-mono">{address || "Not connected"}</p>
-        <p className="text-sm text-slate-400">Network: {network?.name || "-"}</p>
-        {user?.walletAddress && (
-          <p className="text-xs text-slate-500">Profile wallet: {user.walletAddress}</p>
-        )}
-        {!walletMatchesUser && address && user?.walletAddress && (
-          <p className="text-xs text-amber-300 mt-1">Connected account does not match profile wallet. Switch in MetaMask and reconnect.</p>
-        )}
-        {onWrongNetwork && (
-          <div className="text-xs text-amber-300 mt-1 flex items-center gap-2">
-            <span>Wrong network. Switch to Sepolia.</span>
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 border border-slate-800 p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm uppercase tracking-wide text-slate-400">Wallet Center</p>
+            <h2 className="mt-1 text-2xl font-semibold text-white">Connect, align, and stay on-chain</h2>
+            <p className="mt-2 text-sm text-slate-300">
+              Ensure MetaMask is connected, on Sepolia, and matches your profile wallet before starting a demo.
+            </p>
+            {status && <p className="mt-3 text-xs text-amber-300">{status}</p>}
+            {walletError && <p className="mt-1 text-xs text-amber-300">{walletError}</p>}
+          </div>
+          <div className="flex flex-col items-end gap-2">
             <button
-              className="underline text-primary disabled:opacity-60"
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                showConnected
+                  ? "bg-slate-800 text-slate-300 cursor-default"
+                  : "bg-primary text-slate-950 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 active:translate-y-0"
+              }`}
+              onClick={showConnected ? undefined : primaryAction}
+              disabled={showConnected || isSwitching}
+            >
+              {primaryLabel()}
+            </button>
+            {showConnected && (
+              <button
+                className="text-xs text-slate-300 underline underline-offset-4 hover:text-white"
+                onClick={disconnect}
+              >
+                Disconnect
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase text-slate-400">Connection</p>
+              <p className="text-lg font-semibold text-white">{isConnected ? short(address) : "Not connected"}</p>
+            </div>
+            {statusPill(isConnected, "Connected", "Action needed")}
+          </div>
+          <p className="mt-2 text-sm text-slate-400">Use MetaMask and pick the account you want to transact with.</p>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase text-slate-400">Account match</p>
+              <p className="text-lg font-semibold text-white">
+                {walletMatchesUser ? "Matches profile" : "Mismatch"}
+              </p>
+            </div>
+            {statusPill(walletMatchesUser, "Synced", "Mismatch")}
+          </div>
+          <p className="mt-2 text-sm text-slate-400">Profile wallet: {short(user?.walletAddress)}</p>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase text-slate-400">Network</p>
+              <p className="text-lg font-semibold text-white">{networkName}</p>
+            </div>
+            {statusPill(!onWrongNetwork, "Sepolia", "Switch required")}
+          </div>
+          <div className="mt-2 flex items-center justify-between text-sm text-slate-400">
+            <span>Chain ID</span>
+            <span className="font-mono text-slate-200">{networkId}</span>
+          </div>
+          {onWrongNetwork && (
+            <button
+              className="mt-3 text-xs text-primary underline underline-offset-4 disabled:opacity-60"
               onClick={() => switchToChain(sepoliaChainIdHex)}
               disabled={isSwitching}
             >
-              {isSwitching ? "Switching..." : "Switch"}
+              {isSwitching ? "Switching..." : "Switch to Sepolia"}
             </button>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
+        <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase text-slate-400">Live details</p>
+              <p className="text-lg font-semibold text-white">Connection state</p>
+            </div>
+            {statusPill(showConnected, "Ready", "Incomplete")}
           </div>
-        )}
-        <button
-          className={`mt-3 px-4 py-2 rounded transition transform duration-200 ${
-            showConnected
-              ? "bg-slate-700 cursor-default"
-              : "bg-primary hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 active:translate-y-0"
-          }`}
-          onClick={showConnected ? undefined : handleSwitch}
-          disabled={showConnected}
-        >
-          {showConnected ? "Connected" : walletMatchesUser ? "Connect MetaMask" : "Switch to profile wallet"}
-        </button>
-        {showConnected && (
-          <button
-            className="mt-2 px-3 py-2 rounded bg-slate-800 text-sm"
-            type="button"
-            onClick={disconnect}
-          >
-            Disconnect
-          </button>
-        )}
-        {status && <p className="text-xs text-amber-300 mt-2">{status}</p>}
-        {walletError && <p className="text-xs text-amber-300 mt-1">{walletError}</p>}
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+              <p className="text-xs text-slate-400">Connected address</p>
+              <p className="mt-1 font-mono text-sm text-white break-all">{address || "Not connected"}</p>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+              <p className="text-xs text-slate-400">Profile wallet</p>
+              <p className="mt-1 font-mono text-sm text-white break-all">{user?.walletAddress || "Not set"}</p>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+              <p className="text-xs text-slate-400">Network</p>
+              <p className="mt-1 text-sm text-white">{networkName}</p>
+            </div>
+            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+              <p className="text-xs text-slate-400">Status</p>
+              <p className="mt-1 text-sm text-white">{showConnected ? "Aligned" : "Needs setup"}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-3">
+          <p className="text-xs uppercase text-slate-400">Checklist</p>
+          <ul className="space-y-2 text-sm text-slate-200 list-disc list-inside">
+            <li>MetaMask installed and unlocked.</li>
+            <li>Network set to Sepolia.</li>
+            <li>Connected account matches your profile wallet.</li>
+            <li>If things look stuck, disconnect then reconnect.</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

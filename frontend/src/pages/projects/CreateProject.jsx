@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createProject, listFreelancers } from "../../services/api.js";
 
 const newMilestone = () => ({ title: "", description: "", amount: "", deadline: "" });
@@ -9,6 +9,14 @@ const CreateProject = () => {
   const [message, setMessage] = useState(null);
   const [freelancers, setFreelancers] = useState([]);
 
+  const milestoneTotal = useMemo(
+    () => milestones.reduce((acc, m) => acc + Number(m.amount || 0), 0),
+    [milestones]
+  );
+  const budgetNumber = Number(form.budget || 0);
+  const budgetDelta = budgetNumber - milestoneTotal;
+  const budgetMatches = budgetNumber > 0 && Math.abs(budgetDelta) < 1e-9;
+
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const updateMilestone = (idx, key, value) => {
     const copy = [...milestones];
@@ -17,6 +25,10 @@ const CreateProject = () => {
   };
 
   const addMilestone = () => setMilestones([...milestones, newMilestone()]);
+  const removeMilestone = (idx) => {
+    if (milestones.length === 1) return;
+    setMilestones(milestones.filter((_, i) => i !== idx));
+  };
 
   useEffect(() => {
     listFreelancers().then(setFreelancers).catch(console.error);
@@ -25,12 +37,11 @@ const CreateProject = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     setMessage(null);
-    const sum = milestones.reduce((acc, m) => acc + Number(m.amount || 0), 0);
     if (!form.title || !form.description || !form.budget) {
       setMessage("Title, description, and budget are required");
       return;
     }
-    if (Number(form.budget) <= 0) {
+    if (budgetNumber <= 0) {
       setMessage("Budget must be greater than 0");
       return;
     }
@@ -38,13 +49,13 @@ const CreateProject = () => {
       setMessage("Deadline must be in the future");
       return;
     }
-    if (Math.abs(sum - Number(form.budget)) > 1e-9) {
+    if (!budgetMatches) {
       setMessage("Milestone total must equal budget");
       return;
     }
     const payload = {
       ...form,
-      budget: Number(form.budget),
+      budget: budgetNumber,
       milestones: milestones.map((m) => ({
         ...m,
         amount: Number(m.amount),
@@ -55,45 +66,217 @@ const CreateProject = () => {
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded p-6">
-      <h3 className="text-xl font-semibold mb-4">Create project</h3>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <input className="w-full bg-slate-800 px-3 py-2 rounded" name="title" placeholder="Title" onChange={onChange} />
-        <textarea className="w-full bg-slate-800 px-3 py-2 rounded" name="description" placeholder="Description" onChange={onChange} />
-        <input className="w-full bg-slate-800 px-3 py-2 rounded" name="budget" placeholder="Budget (ETH)" onChange={onChange} />
-        <input className="w-full bg-slate-800 px-3 py-2 rounded" type="date" name="deadline" onChange={onChange} />
-        <select
-          className="w-full bg-slate-800 px-3 py-2 rounded text-sm"
-          name="freelancerId"
-          value={form.freelancerId}
-          onChange={onChange}
-        >
-          <option value="">Select freelancer (optional)</option>
-          {freelancers.map((f) => (
-            <option key={f._id} value={f._id}>
-              {f.name} — {f.email}
-            </option>
-          ))}
-        </select>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold">Milestones</p>
-            <button type="button" onClick={addMilestone} className="text-sm text-primary">+ Add</button>
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-gradient-to-r from-primary/20 via-slate-900 to-slate-900 border border-primary/30 px-6 py-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm uppercase tracking-[0.2em] text-primary/80">Create</p>
+            <h1 className="text-2xl font-semibold text-slate-50 mt-1">Launch a new project</h1>
+            <p className="text-sm text-slate-300 mt-1">Scope, budget, milestones, and who should deliver.</p>
           </div>
-          {milestones.map((m, idx) => (
-            <div key={idx} className="grid md:grid-cols-4 gap-2">
-              <input className="bg-slate-800 px-3 py-2 rounded" placeholder="Title" value={m.title} onChange={(e) => updateMilestone(idx, "title", e.target.value)} />
-              <input className="bg-slate-800 px-3 py-2 rounded" placeholder="Description" value={m.description} onChange={(e) => updateMilestone(idx, "description", e.target.value)} />
-              <input className="bg-slate-800 px-3 py-2 rounded" placeholder="Amount (ETH)" value={m.amount} onChange={(e) => updateMilestone(idx, "amount", e.target.value)} />
-              <input className="bg-slate-800 px-3 py-2 rounded" type="date" placeholder="Deadline" value={m.deadline} onChange={(e) => updateMilestone(idx, "deadline", e.target.value)} />
+          <div className="flex items-center gap-3">
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${budgetMatches ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30" : "bg-amber-500/15 text-amber-200 border border-amber-400/40"}`}>
+              {budgetMatches ? "Budget aligned" : "Align budget & milestones"}
+            </span>
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-slate-200">
+              {milestones.length} milestone{milestones.length === 1 ? "" : "s"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-5">
+          <form onSubmit={onSubmit} className="space-y-6">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-5 py-5 shadow-lg shadow-black/10">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-50">Project details</h3>
+                  <p className="text-sm text-slate-400">Tell us what you need built.</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-slate-300">Title</label>
+                  <input
+                    className="mt-1 w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 border border-slate-700 focus:border-primary outline-none"
+                    name="title"
+                    placeholder="e.g. Build escrow-enabled marketplace"
+                    value={form.title}
+                    onChange={onChange}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-300">Description</label>
+                  <textarea
+                    className="mt-1 w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 border border-slate-700 focus:border-primary outline-none"
+                    name="description"
+                    placeholder="What needs to be delivered, key requirements, stack preferences."
+                    rows={4}
+                    value={form.description}
+                    onChange={onChange}
+                  />
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-slate-300">Total budget (ETH)</label>
+                    <input
+                      className="mt-1 w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 border border-slate-700 focus:border-primary outline-none"
+                      name="budget"
+                      placeholder="0.50"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={form.budget}
+                      onChange={onChange}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-300">Project deadline</label>
+                    <input
+                      className="mt-1 w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 border border-slate-700 focus:border-primary outline-none"
+                      type="date"
+                      name="deadline"
+                      value={form.deadline}
+                      onChange={onChange}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm text-slate-300">Assign freelancer (optional)</label>
+                  <select
+                    className="mt-1 w-full rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:border-primary outline-none"
+                    name="freelancerId"
+                    value={form.freelancerId}
+                    onChange={onChange}
+                  >
+                    <option value="">Select freelancer</option>
+                    {freelancers.map((f) => (
+                      <option key={f._id} value={f._id}>
+                        {f.name} — {f.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-          ))}
+
+            <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-5 py-5 shadow-lg shadow-black/10 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-50">Milestones</h3>
+                  <p className="text-sm text-slate-400">Break work into payable steps.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={addMilestone}
+                  className="text-sm font-medium px-3 py-2 rounded-lg bg-primary text-slate-950 hover:opacity-90"
+                >
+                  + Add milestone
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {milestones.map((m, idx) => (
+                  <div key={idx} className="rounded-lg border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-slate-200 font-semibold">
+                        <span className="text-xs px-2 py-1 rounded-full bg-white/5 border border-white/10">#{idx + 1}</span>
+                        <span>Milestone</span>
+                      </div>
+                      {milestones.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeMilestone(idx)}
+                          className="text-xs text-rose-200 hover:text-rose-100"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <input
+                          className="w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 border border-slate-700 focus:border-primary outline-none"
+                          placeholder="Title"
+                          value={m.title}
+                          onChange={(e) => updateMilestone(idx, "title", e.target.value)}
+                        />
+                        <input
+                          className="w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 border border-slate-700 focus:border-primary outline-none"
+                          placeholder="Description"
+                          value={m.description}
+                          onChange={(e) => updateMilestone(idx, "description", e.target.value)}
+                        />
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <input
+                          className="w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 border border-slate-700 focus:border-primary outline-none"
+                          placeholder="Amount (ETH)"
+                          value={m.amount}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          onChange={(e) => updateMilestone(idx, "amount", e.target.value)}
+                        />
+                        <input
+                          className="w-full rounded-lg bg-slate-800 px-3 py-2 text-slate-100 border border-slate-700 focus:border-primary outline-none"
+                          type="date"
+                          placeholder="Deadline"
+                          value={m.deadline}
+                          onChange={(e) => updateMilestone(idx, "deadline", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                className="bg-primary px-5 py-2.5 rounded-lg text-slate-950 font-semibold hover:opacity-90"
+                type="submit"
+              >
+                Create project
+              </button>
+              {message && <p className="text-sm text-emerald-400">{message}</p>}
+            </div>
+          </form>
         </div>
 
-        <button className="bg-primary px-4 py-2 rounded" type="submit">Create</button>
-        {message && <p className="text-sm text-emerald-400">{message}</p>}
-      </form>
+        <div className="space-y-4">
+          <div className="rounded-xl border border-slate-800 bg-slate-950/70 px-5 py-5 shadow-lg shadow-black/10 space-y-3">
+            <h4 className="text-sm font-semibold text-slate-100">Budget alignment</h4>
+            <div className="flex items-center justify-between text-sm text-slate-300">
+              <span>Total budget</span>
+              <span className="font-semibold text-slate-50">{budgetNumber || 0} ETH</span>
+            </div>
+            <div className="flex items-center justify-between text-sm text-slate-300">
+              <span>Milestones total</span>
+              <span className="font-semibold text-slate-50">{milestoneTotal || 0} ETH</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-400">Delta</span>
+              <span className={budgetMatches ? "text-emerald-300" : "text-amber-300"}>{budgetDelta.toFixed(2)} ETH</span>
+            </div>
+            <div className={`mt-2 text-xs px-3 py-2 rounded-lg border ${budgetMatches ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100" : "border-amber-500/30 bg-amber-500/10 text-amber-100"}`}>
+              {budgetMatches ? "Ready to submit" : "Match milestones to the total budget before submitting."}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-950/70 px-5 py-5 shadow-lg shadow-black/10 space-y-3 text-sm text-slate-200">
+            <h4 className="text-sm font-semibold text-slate-100">Demo tips</h4>
+            <ul className="list-disc list-inside space-y-2 text-slate-300">
+              <li>Keep milestones small so payouts are quick to verify.</li>
+              <li>Set a future deadline; past dates are blocked.</li>
+              <li>Assign a freelancer now or later; both flows work.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
