@@ -44,11 +44,18 @@ const Sidebar = () => {
   return (
     <aside className="w-64 glass-panel p-5 hidden md:flex flex-col gap-4 relative overflow-hidden">
       <div className="absolute inset-0 opacity-60 pointer-events-none bg-[radial-gradient(circle_at_30%_20%,rgba(6,182,212,0.14),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(249,115,22,0.12),transparent_26%)]" />
-      <div className="relative z-10">
-        <div className="text-2xl font-black tracking-tight bg-gradient-to-r from-cyan-200 via-emerald-200 to-cyan-300 bg-clip-text text-transparent">
-          EscrowLancer
+      <div className="relative z-10 flex items-center gap-3">
+        <img 
+          src="/logo.png" 
+          alt="EscrowLance Logo" 
+          className="h-10 w-10 object-contain"
+        />
+        <div>
+          <div className="text-2xl font-black tracking-tight bg-gradient-to-r from-cyan-200 via-emerald-200 to-cyan-300 bg-clip-text text-transparent">
+            EscrowLancer
+          </div>
+          <p className="text-xs text-slate-400">On-chain trust for projects</p>
         </div>
-        <p className="text-xs text-slate-400">On-chain trust for projects</p>
       </div>
       <nav className="relative z-10 space-y-2">
         {links.map((l) => (

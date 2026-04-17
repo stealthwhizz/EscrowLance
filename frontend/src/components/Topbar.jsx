@@ -15,10 +15,17 @@ const Topbar = () => {
 
   return (
     <header className="glass-panel flex items-center justify-between px-6 py-4 border border-white/10 text-slate-100 bg-gradient-to-r from-slate-950/70 via-slate-900/60 to-slate-950/70">
-      <div className="flex flex-col gap-1">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-slate-300/80">Welcome back</p>
-        <p className="font-semibold text-lg leading-tight">{user?.name || "Guest"}</p>
-        <p className="text-xs text-slate-300/80">Keep your wallet on Sepolia to stay ready for on-chain actions.</p>
+      <div className="flex items-center gap-4">
+        <img 
+          src="/logo.png" 
+          alt="EscrowLance Logo" 
+          className="h-10 w-10 object-contain"
+        />
+        <div className="flex flex-col gap-1">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-slate-300/80">Welcome back</p>
+          <p className="font-semibold text-lg leading-tight">{user?.name || "Guest"}</p>
+          <p className="text-xs text-slate-300/80">Keep your wallet on Sepolia to stay ready for on-chain actions.</p>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 text-sm">
